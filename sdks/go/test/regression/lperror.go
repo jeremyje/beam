@@ -18,17 +18,34 @@ package regression
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"sort"
 
 	"github.com/apache/beam/sdks/v2/go/pkg/beam"
 	"github.com/apache/beam/sdks/v2/go/pkg/beam/register"
 )
 
+const (
+	// MetricNamespace is the namespace for regression test metrics.
+	MetricNamespace = string("regression")
+	// FruitCounterName is the name of the fruit counter metric.
+	FruitCounterName = string("fruitCount")
+)
+
 func init() {
 	register.Function2x2(toFoo)
 	register.Iter1[*fruit]()
+
 	register.Function3x1(toID)
+	register.Iter1[*fruit]()
+	register.Iter1[string]()
+
+	register.Function2x0(sendFruit)
+	register.Iter1[*fruit]()
+
+	register.Function2x1(countFruit)
+
+	register.DoFn2x1[[]byte, func(*fruit) bool, error](&iterSideStrings{})
+	register.Iter1[*fruit]()
 }
 
 // REPRO found by https://github.com/zelliott
@@ -74,13 +91,6 @@ func LPErrorPipeline(s beam.Scope) beam.PCollection {
 	return beam.ParDo(s, toID, fruitsFooCoGBK)
 }
 
-const (
-	// MetricNamespace is the namespace for regression test metrics.
-	MetricNamespace = string("regression")
-	// FruitCounterName is the name of the fruit counter metric.
-	FruitCounterName = string("fruitCount")
-)
-
 func sendFruit(_ []byte, emit func(fruit)) {
 	emit(fruit{"Apple"})
 	emit(fruit{"Banana"})
@@ -116,13 +126,6 @@ func (fn *iterSideStrings) ProcessElement(_ []byte, iter func(*fruit) bool) erro
 		}
 	}
 	return nil
-}
-
-func init() {
-	beam.RegisterFunction(countFruit)
-	beam.RegisterFunction(sendFruit)
-	beam.RegisterType(reflect.TypeOf((*iterSideStrings)(nil)))
-	beam.RegisterType(reflect.TypeOf((*fruit)(nil)).Elem())
 }
 
 // LPErrorReshufflePipeline checks a Row type with reshuffle transforms.

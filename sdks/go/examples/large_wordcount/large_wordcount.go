@@ -92,6 +92,7 @@ func init() {
 	register.Function2x1(formatFn)
 	register.DoFn4x1[context.Context, []byte, func(*string) bool, func(metakey), error](&makeMetakeys{})
 
+	register.Iter1[*metakey]()
 	register.DoFn4x0[context.Context, string, func(*metakey) bool, func(metakey, string)](&pairWithMetakey{})
 	register.DoFn5x1[context.Context, metakey, func(*string) bool, func(string) func(*int) bool, func(string), error](&writeTempFiles{})
 	register.DoFn4x1[context.Context, metakey, func(*string) bool, func(string), error](&renameFiles{})
